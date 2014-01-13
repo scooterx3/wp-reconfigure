@@ -1,0 +1,107 @@
+import sys, re, shutil, os
+
+welcomemsg = '''
+      __      __   ___  __   __        ___    __  
+|  | |__) __ |__) |__  /  ` /  \ |\ | |__  | / _` 
+|/\| |       |  \ |___ \__, \__/ | \| |    | \__> 
+                                                  
+
+'''
+
+credentials_old = {}
+credentials_new = {}
+configfile = 'wp-config.php'
+configfile_backup = '.wp-config.php_wp_recon_backup'
+tempfile = '.wp-config.php_wp_recon_tempfile'
+
+beautyandthebeast = {'db':'DB_NAME', 'user':'DB_USER', 'pass':'DB_PASSWORD', 'host':'DB_HOST'}
+#So I could keep the code as clean as I wanted, I needed a relationship between the 'clean' and 'dirty' identifiers
+
+def get_input():
+	input = raw_input("Enter new DB_NAME, DB_USER ,DB_PASS and [DB_HOST]:\n> ")
+	# print input
+	newlist = input.split(' ')
+
+	# Checking for appropriate number of arguments
+	if len(newlist) < 3:
+		print "You didn't supply 3 arguments"
+		get_input()
+	elif len(newlist) < 4:
+		credentials_new['db'] = newlist[0]
+		credentials_new['user'] = newlist[1]
+		credentials_new['pass'] = newlist[2]
+		credentials_new['host'] = 'localhost' #If only 3 arguments supplied, default to 'localhost' 
+	else:	
+		credentials_new['db'] = newlist[0]
+		credentials_new['user'] = newlist[1]
+		credentials_new['pass'] = newlist[2]
+		credentials_new['host'] = newlist[3]
+
+
+	# print "NEW DB_NAME: ", credentials_new['db']
+	# print "NEW DB_USER: ", credentials_new['user']
+	# print "NEW DB_PASS: ", credentials_new['pass']
+	# print "NEW DB_HOST: ", credentials_new['host']
+
+
+def get_old():
+
+	# Grabs old values from the wp-config file as well as writes each line to a temp file. 
+
+	wp-config = open(configfile,'r')
+	temp = open(tempfile,'w')
+
+	for line in wp-config:
+		for clean, dirty  in beautyandthebeast.iteritems():
+			if dirty in line:
+				oldvalue = re.search(".*['](.*)[']", line) # Select appropriate values
+				credentials_old[clean] = oldvalue.group(1) # assign credentials_old values
+				line = str.replace(line, credentials_old[clean], credentials_new[clean]) # replace credentials_old with credentials_new
+				# print line
+		temp.write(line); #write each line (modified or not) of wp-config to a new temp file
+
+	temp.close() #save the temp file
+
+def compare():
+	print "OLD:",credentials_old['db'],credentials_old['user'],credentials_old['pass'],credentials_old['host']
+	print "NEW:",credentials_new['db'],credentials_new['user'],credentials_new['pass'],credentials_new['host']
+
+
+def confirmcontinue():
+	# Gives the user a chance to abort or move forward with the process
+
+	answer = raw_input("Do you want to continue? [Y|n]")
+	if answer == 'y' or answer == 'Y' or answer == '':
+
+		# If they say yes, then I make a backup, write the temp file and move it over the top of the current wp-config file
+
+		print "Writing changes"
+		backup()
+		get_old()
+		shutil.move(tempfile,configfile)
+
+	elif answer == 'n' or answer == 'N':
+		print "Aborted!"
+
+	else:
+		print "Invalid response"
+		confirmcontinue()
+
+
+def backup():
+	# backs up original wp-config file if a backup doesn't already exist
+
+	if os.path.exists(configfile_backup) == True:
+		print "Backup already exists"
+	else:
+		print "Making a backup"
+		shutil.copyfile(configfile,configfile_backup)
+
+
+print welcomemsg
+get_input()
+get_old()
+compare()
+confirmcontinue()
+
+
