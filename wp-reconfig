@@ -48,10 +48,10 @@ def get_old():
 
 	# Grabs old values from the wp-config file as well as writes each line to a temp file. 
 
-	wp-config = open(configfile,'r')
+	wpconfig = open(configfile,'r')
 	temp = open(tempfile,'w')
 
-	for line in wp-config:
+	for line in wpconfig:
 		for clean, dirty  in beautyandthebeast.iteritems():
 			if dirty in line:
 				oldvalue = re.search(".*['](.*)[']", line) # Select appropriate values
